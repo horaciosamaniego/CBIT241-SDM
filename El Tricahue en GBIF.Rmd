@@ -1,0 +1,469 @@
+---
+title: "Nicho y SDM"
+author: "Horacio Samaniego"
+date: "`r Sys.Date()`"
+
+editor_options: 
+  markdown: 
+    wrap: 120
+---
+
+# Modelos de distribucion de especies I
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+#	message = FALSE,
+#	warning = FALSE,
+	cache = TRUE,
+	tidy = TRUE,
+	tidy.opts = list(blank = FALSE, width.cutoff = 80)
+)
+
+require(pacman)
+pacman::p_load(rgbif,
+               rworldxtra,
+               sf , 
+               terra, 
+               ggplot2,
+               tidyverse, 
+               kableExtra, 
+               mapview, 
+               geodata,
+               curl)
+options("kableExtra.html.bsTable" = T)
+```
+
+## Uso de GBIF para el manejo de datos en conservación
+
+[GBIF](https://www.gbif.org) es la Global Biodiversity Information Facility. Una red de infraestructura de datos
+internacional financiada por distintos gobiernos. Su objetivo es proporcionar acceso libre y gratuito a datos sobre
+biodiversidad a nivel mundial. GBIF movilizan datos de diversas fuentes incluyendo museos, herbarios, instituciones de
+investigación y ciudadanos científicos para ponerlos a disposición del la comunidad en un único portal. Las principales
+características y funciones de GBIF incluyen: - Agregación de datos: GBIF agrega datos sobre biodiversidad de diversas
+instituciones y organizaciones, creando un conjunto de datos completo e interoperable. - Accesibilidad a los datos: GBIF
+proporciona una plataforma para que los usuarios accedan a una gran cantidad de datos sobre biodiversidad. Los
+investigadores, los responsables políticos y el público en general pueden utilizar la información para diversos fines,
+como la investigación científica, planificación de la conservación y la toma de decisiones. - Estándares de datos: GBIF
+promueve el uso de estándares comunes para los datos de biodiversidad, asegurando que la información de diferentes
+fuentes pueda ser fácilmente integrada y comparada. - Colaboración Internacional: GBIF fomenta la colaboración entre
+países y organizaciones para compartir datos sobre biodiversidad a nivel mundial. Funciona como una red de nodos, cada
+uno de los cuales representa a un país o región. - Informática de la Biodiversidad: GBIF desempeña un papel en el avance
+de la informática de la biodiversidad, que implica el uso de tecnología informática para gestionar y analizar datos de
+biodiversidad.
+
+Al proporcionar una plataforma unificada para acceder a los datos de biodiversidad, GBIF contribuye a la comprensión
+global de los patrones de biodiversidad, ayuda a controlar los cambios en los ecosistemas y apoya los esfuerzos
+relacionados con la conservación y el desarrollo sostenible. Investigadores y responsables políticos confían a menudo en
+GBIF para acceder a información actualizada y completa sobre biodiversidad para su trabajo.
+
+Existen además distintas API orientadas a distintos lenguajes informáticos para acceder a esta información. (i.e.
+[Ruby](https://github.com/sckott/gbifrb), [Python](https://github.com/gbif/pygbif),
+[PHP](https://gitlab.res-telae.cat/restelae/php-gbif) y [R](https://github.com/ropensci/rgbif)). Aquí utilizaremos R
+para poder acceder a datos de GBIF como parte de la practica de hacer [ciencia abierta](https://ropensci.org/).
+
+### Estudio de distribución de especies usando datos de GBIF
+
+Vamos a hacer un modelo de distribucion de especies para *Octodon degus*.
+[Aquí](https://es.wikipedia.org/wiki/Octodon_degus) una descripción del endémico ratón de cola de pincel.
+
+**¿Cuántos registros de presencia hay para Chile?**
+
+La función `occ_count()` retorna la cantidad de registros de presencia de acuerdo con criterios como código del taxón
+(taxonKey), tipo de registro (basisOfRecord), país y año, entre otros.
+
+Por ejemplo, `occ_count()` retorna `r occ_count()`, el número total de registros en la base de datos.
+
+Ahora, `occ_count()` acepta una variedad de parámetros (ver `?occ_count`) como por ejemplo, el conteo de registros
+georreferenciados o bien el número de registros por país. Chile en este caso. 
+
+
+```{r ej-gbif-chile, echo=TRUE, warning=FALSE}
+
+## Conteo para Chile
+occ_count(country="CL",hasCoordinate = TRUE, hasGeospatialIssue=FALSE)
+```
+
+Un ejemplo: ¿Cuántos registros georeferenciado de puma (*Puma concolor*) existen en GBIF para Chile?
+
+```{r pumas-arg, echo=TRUE}
+name <- name_backbone(name='Puma concolor', rank='species') # Obtención del código del taxón
+
+print(name[, c('usageKey', 'scientificName')])
+```
+
+Usando el número de registro para *Puma concolor* en la Base de datos GBIF podemos contarlos:
+
+```{r pumas-n-arg, echo=TRUE, warning=FALSE}
+p_en_cl <- occ_count(taxonKey = 2435099, 
+          country = 'CL',
+          hasCoordinate = TRUE, 
+          hasGeospatialIssue=FALSE
+)
+```
+
+Hay entonces, `r p_en_cl` registros georeferenciados en Chile en la base de datos de GBIF!
+
+-   [Aqui](https://docs.ropensci.org/rgbif/articles/taxonomic_names.html) una guía para trabajar con nombres
+    taxonómicos.
+
+## El loro tricahue (*Cyanoliseus patagonus*)
+
+Ahora, podemos describir la distribucion de **Cyanoliseus patagonus**.
+
+![*Cyanoliseus patagonus* (Molina,
+1782)](https://upload.wikimedia.org/wikipedia/commons/5/5c/Cyanoliseus_patagonus_-Limari_Province%2C_Chile_-three-8_%28cropped%29.jpg)
+
+
+-   [Aqui](https://especies.mma.gob.cl/CNMWeb/Web/WebCiudadana/ficha_indepen.aspx?EspecieId=4&Version=1)
+    encuentras la ficha del Ministerio del Medio Ambiente aqui para esta especie.
+
+Usaremos dos funciones de la librería `rgbif` para descargar los registros georeferenciados de tricahue en Chile. Con
+`occ_search()` y `occ_data()` puedes recuperar esto y obtener todos los registros existentes. Entre ellos, nos
+interesará el *nombre científico*, *país*, *continente*, *fecha*, entre otros datos.
+
+`occ_search` nos da un resumen de resultados como los del paquete `dplyr` de Tidyverse que nos será muy útil para
+filtrar, seleccionar y agrupar los registros, mientras que `occ_data` está optimizada para ser más eficiente y se
+recomienda en caso de buscar un volumen mayor de información desde GBIF.
+
+-   Ojo -\> Sólo se entregan **máximo de 100000** registros en cada llamada.
+-   Mas info [aqui](https://docs.ropensci.org/rgbif/articles/getting_occurrence_data.html) para descargas de datos.
+
+```{r degus-chile, echo=TRUE}
+spp ="Cyanoliseus patagonus"
+cp <- occ_data(
+  scientificName = spp, 
+  country = 'CL', 
+  limit = 1e6,
+  hasCoordinate = TRUE, 
+  hasGeospatialIssue = FALSE
+)
+
+# plotear año y N
+cp$data |>
+  kbl() |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) |>
+  scroll_box(width = "100%", height = "300px")
+```
+
+Vemos (con: `dim(od$data)`) que la consulta nos retornó `r nrow(od$data)` registros (filas) y `r ncol(od$data)` columnas
+de información para cada registro. Esos son muchos datos para cada registro. Debemos evaluar qué son y ver cuales nos
+son útiles!!!
+
+Para ver la lista completa veamos la lista de nombres de columnas con `names()`:
+
+```{r cols-tricahue-gbif-chile, echo=TRUE}
+names(cp$data) |>
+  kbl() |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),fixed_thead = T) |>
+  scroll_box(width = "100%", height = "350px")
+```
+
+De la misma manera, podemos ver en que localidades ocurrienron los muestreos:
+
+```{r localities, echo=TRUE}
+unique(cp$data$locality) |>
+  kbl() |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"),fixed_thead = T) |>
+  scroll_box(width = "100%", height = "350px")
+```
+
+### Construcción de un set de datos geográfico
+
+Cada registro tiene asociado coordenadas geográficas, lo que nos permite transformar esta tabla a un objeto de tipo `sf`
+([simple feature](https://r-spatial.github.io/sf/articles/sf1.html)). Con eso podemos representarlo espacialmente
+
+Entonces, primero transformamos estos datos en un objeto "geográfico" de `sf` usando las columnas `"decimalLongitude"`
+para `x` y `"decimalLatitude"` para `y`. Hay que tambien designar la proyección geográfico. Aqui es simplemente la
+latlon ([epsg: 4326](https://epsg.io/4326)).
+
+-   [Aquí](https://www.nceas.ucsb.edu/sites/default/files/2020-04/OverviewCoordinateReferenceSystems.pdf) una guía
+    básica para comprender proyecciones geográficas de [NCEAS](https://www.nceas.ucsb.edu/).
+
+```{r degus-sf, echo=TRUE}
+# od_sf <- st_as_sf(od$data, coords = c("decimalLongitude", "decimalLatitude"), 
+                   # crs= "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+cp_sf <- st_as_sf(cp$data, coords = c("decimalLongitude", "decimalLatitude"), 
+                   crs= "epsg:4326")
+```
+
+ahora, veamos nuevamente la tabla completa:
+
+```{r ver-table-degus-gbif, echo=TRUE}
+cp_sf |>
+  kbl() |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) |>
+  scroll_box(width = "100%", height = "400px")
+```
+
+es básicamente la misma que `od`, la anterior, sólo que se puede manipular espacialente y tiene una columna llamada
+`geometry`. Esto nos permite manipular los datos como si cada fila fuera un punto a ver en un mapa pues cada registro
+(fila) tiene asociada una coordenada.
+
+### Distribución geográfica de registros de O.degus en GBIF para Chile
+
+Lo primero es ver donde quedan estas coordenadas. Usemos `ggplot2`:
+
+Pero, es posible poner los registros en un mapa de las comunas de Chile?
+
+Para eso necesitamos un mapa de las comunas. Buscamos entre los shapefiles de la Biblioteca Nacional y lo usamos como
+mapa base.
+
+```{r leer-shp-bcn, echo=TRUE}
+shp='comunas.shp'
+
+if ( !file.exists(shp) ){
+  url_com = "https://www.bcn.cl/obtienearchivo?id=repositorio/10221/10396/2/Comunas.zip"
+  print(paste("Descargando",shp, "de",url_com))
+  # library(curl)
+  com_tmp = tempfile()
+  com = curl::curl_download(url_com,com_tmp)
+  unzip(com)
+}
+
+comunas = read_sf("comunas.shp") |>
+#  dplyr::filter(Region == 'Región de Los Ríos') |>
+  dplyr::select(Comuna, Provincia) |>
+  st_transform(crs=32719) # es importante manejar esa info en coordenadas "reales"
+cp_sf2 <- cp_sf |>
+  st_transform(crs=32719) # es importante manejar esa info en coordenadas "reales"
+
+ggplot() + 
+  geom_sf(data=comunas, alpha=.7) +
+    geom_sf(data = cp_sf, pch=4, col="MidnightBlue") + theme_bw() +
+   ggtitle("Registros de C. patagonus en GBIF")  +
+   ylim(st_bbox(cp_sf2)[2]-5e4,st_bbox(cp_sf2)[4]+5e4) + 
+   xlim(st_bbox(cp_sf2)[1]-2e5,st_bbox(cp_sf2)[3]+5e4) # ajustar
+```
+
+podemos hacer un zoom limitando el `x` e `y` a mostrar con `ylim` y `xlim`. Pero para eso usamos `st_bbox()` que retorna
+la extensión del objeto geográfico:
+
+```{r mapa-ggplot, echo=TRUE}
+data("countriesHigh")
+cl <- countriesHigh |>
+  st_as_sf() |>
+  dplyr::filter(NAME=="Chile") |>
+  st_make_valid()
+
+# con esto vemos los limites geograficos al obj
+print(st_bbox(cp_sf))
+
+ggplot() + 
+  geom_sf(data=cl,alpha=.4 ) +
+  geom_sf(data = cp_sf, alpha=.3 ) +
+  ylim(st_bbox(cp_sf)[2]-.2,st_bbox(cp_sf)[4]+.2) +
+  xlim(st_bbox(cp_sf)[1]-.5,st_bbox(cp_sf)[3]+.5)
+
+
+```
+Como vemos, hay 2 núcleos principales y algunos puntos que representan, probablemente errores de avistamiento (?). Debieramos removerlos antes del análisis.
+
+
+
+### Visualización interactiva
+
+Podemos usar mapview para explorar los datos de forma interactiva, usando la columna `year` para ver como se ha
+muestreado a través de los años. Vamos a usar el parámetro `cex` para ajustar el tamaño del marcador (punto) que nos
+permite visualizar el número de registros por año.
+
+```{r ploteo-interactivo, echo=TRUE}
+conteo <- cp_sf |>
+  group_by(locality,year) |>
+  mutate('Número de registros'=n()) |>
+  distinct()|>
+  st_as_sf()
+
+conteo |>
+  dplyr::select('Número de registros', scientificName, locality, year, stateProvince) |>
+  kbl() |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) |>
+  scroll_box(width = "100%", height = "400px")
+```
+Podemos guardar las tabla a un archivo CSV
+
+```{r}
+# st_write(conteo, "conteo.csv", coords = TRUE)
+```
+
+
+
+
+```{r ploteo-interactivo2, echo=TRUE}
+
+mapview(conteo,zcol='year',cex="Número de registros", alpha=.35, layer.name='Año')
+
+```
+
+
+## Nicho climático
+
+Vamos a buscar cuáles son las condiciones climáticas en que están estos registros y generamos asi, una definición
+(gruesa) del nicho climático.
+
+Para eso, usaremos los datos de Worldclim, que se encuentran documentados [aquí](https://www.worldclim.org). Sólo
+usaremos las variables bioclimáticas.
+
+-   Ojo: La función `getData()`, de la librería `raster` permite descargar directamente desde worldclim los datos
+    bioclimáticos con el parámetro 'var'. Así, `getData('worldclim', var='bio', res=10)` o bien
+    `getData('CMIP5', var='tmin', res=10, rcp=85, model='AC', year=70)` nos permite descargar los datos bioclim[aticos a
+    una resolución mas gruesa, o bien la temperatura mínima para la proyección de cambio climático futuro (CMIP5) del
+    modelo 'AC' para el año 2070, respectivamente !\
+
+```{r worldclim, echo=TRUE}
+Bioclim <- worldclim_country("Chile", var="bio", res=0.5, path=getwd()) |>
+  terra::crop(cp_sf)
+
+
+bioclim_srad <- worldclim_country("Chile", var=c("srad"), res=0.5, path=getwd()) |>
+  terra::crop(cp_sf)
+
+plot(bioclim_srad)
+```
+
+### Clima en sitios de registro de *C. patagonus*
+
+Para extraer los datos bioclimáticos en las coordenadas para *O. degus*, debemos consultar los pixeles de los rasters
+bioclimáticos donde existen ocurrencias en gbif.
+
+![Ejemplo de consulta de valores de raster en
+coordenadas](https://www.esri.com/arcgis-blog/wp-content/uploads/2018/08/extraction_multi.jpg)
+
+La función a usar está en la librería `raster` y se llama `extract()`.
+
+Con eso generamos una tabla con las variables climaticas en cada una de las coordenadas en que hay registros de *O.
+degus* en GBIF.
+
+```{r extraccion-datos-bioclimaticos, echo=TRUE}
+names(Bioclim) <- sapply(strsplit(names(Bioclim), split='30s_', fixed=TRUE), function(x) (x[2]))
+Clima <- raster::extract(Bioclim, cp_sf) |>
+    as.data.frame()
+
+kable(Clima) |> 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) |>
+  scroll_box(width = "100%", height = "400px")
+```
+
+Ahora, a qué corresponde bio1, bio2, etc...??
+
+Veamos, por una parte, que son estas variable:
+`r knitr::include_url("https://www.worldclim.org/data/bioclim.html", height="400px")`
+
+Por otra parte, la inspección de la tabla muestra que sólo tiene los valores bioclimáticos. Necesitamos, ciertamente,
+asociar los registros y probablemente otros datos climáticos.
+
+Pero miremos primero como se relacionan los valores bioclimáticos recuperados para *C. patagus*.
+
+### Correlacion entre vaiables bioclimaticas
+
+Sabemos que las variables bioclimáticas son variables derivadas de la variables de clima. Por lo tanto, han de tener
+fuertes correlaciones entre ellas.
+
+-   [Aqui](https://www.worldclim.org/data/bioclim.html) la descripción de las variable bioclimáticas de worldclim.
+
+Es, por lo tanto, importante comprender cuales variables bioclimáticas son significativamente relevantes para describir,
+y predecir, la distribución de la especies. Esto significa que debemos poder tener una buena idea de la correlación
+entre variables bioclimáticas para no usar variables que representan, en realidad, un mismo aspecto del clima a la hora
+de generar una predicción.
+
+veamos la correlación entre la variables bioclimáticas donde hay *C. patagus*. Fíjense que se han agrupados las filas y
+columnas con correlaciones similares para facilitar la interpretación. Eso puede hacerse con la librería `ggcorrplot` y
+su parámetro `hc.order`.
+
+```{r tabla-correlaciones-bioclimaticas, echo=TRUE}
+
+# install.packages("ggcorrplot")
+# library(ggcorrplot)
+
+corr <- cor(Clima[,-1],use = "pairwise")
+ggcorrplot::ggcorrplot(corr,method='circle',pch=2,show.diag = FALSE,type="upper",
+           ggtheme = theme_minimal(),hc.order = TRUE)
+```
+
+Seleccionamos entonces algunas variables de *Bioclim* que muestren baja correlación (no negativa!).
+
+yo veo las variables :
+
+-   BIO1 = Temperatura media anual
+-   BIO3 = Isotermia (BIO2/BIO7) (×100)
+-   BIO5 = Temperatura máxima del mes más cálido
+-   BIO9 = Temperatura media del trimestre más seco
+-   BIO10 = Temperatura media del trimestre más cálido
+
+(son todas de temperatura.... mmmh sus. Creo que será importante considerar directamente las variables climáticas.)
+
+```{r sel-vars-bioclimaticas, echo=TRUE}
+Bioclim2 <- Bioclim[[c("bio_1","bio_3","bio_5","bio_9","bio_10")]]
+
+Clima2 <- raster::extract(Bioclim2, od_sf) |>
+    as.data.frame()
+
+#rm(Bioclim)
+```
+
+Unimos los datos de ocurrencia de *Octodon degus* con los datos biolimáticos para tener todo en una sola tabla que
+tendrá las coordenadas geográficas de las ocurrencias de *O.degus* en GBIF para Chile.
+
+```{r juntar-datos, echo=TRUE}
+cp2 <- cp_sf |>
+  bind_cols(Clima2)
+
+
+kable(cp2) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))|>
+  scroll_box(width = "100%", height = "400px")
+
+```
+
+
+# Modelo de distribución de especies
+
+## GLM
+
+## Random Forest
+
+
+## Evaluación de modelo
+
+[Fieldings et al 1997](https://www.dropbox.com/scl/fi/s9a0e56osliczbl3csuhg/Fielding_Bell_1997_A-review-of-methods-for-the-assessment-of-prediction-errors-in-conservation.pdf?rlkey=n1iib2m1dcgpc7ad81ykdy3np&dl=0)
+### La matriz de confusión
+
+### data splitting
+
+
+
+
+
+## Reporte
+Con estos ejercicios iremos haciendo un reporte, que será entregado el 18 de nunio 2024.
+
+### Descripción de datos y análisis preliminar
+
+### Mapeo y representación gráfica
+1.  Haz un mapa de la distribución de tu *C. patagus* para Chile
+  a.  ¿En cuántas Regiones encontramos a esta especie?
+  b.  Remueve los "outliers". ¿En cuales comunas de Chile está ahora?
+
+### Análisis de variables independientes
+3.  Construye una base de datos (tabla), con los valores de *temperatura*, *pp*, *radiación* y variables bioclimáticas donde ocurre
+    tu *C.patagus* en Chile.
+    a. Elige las variables mas idoneas para modelar el nicho de *C. patagus*. Justifica tu elección en términos de la biología de la especie.
+
+4.  Describe estadisticamente el espacio bioclimático en que ocurre tu *especie de preferencia*
+  a.  Rangos de T y PP, promedio, moda, desviaciones...
+
+5. Separa los puntos de ocurrencia en 2 sets que representen las poblaciones disjuntas de la especie.
+  a. Vuelve a a hacer 3 y 4
+
+### Análisis de distribución
+5.  General 2 modelos de distribución para cada grupo de ocurrencias. Esto es, usa dos modelos estadísticos de tu preferencia que expliquen la distribución de *C. patagus* en su conjunto y los 2 grupos de ocurrencia seleccionado en 5
+  a.  ¿Cuál(es) es(son) la(s) variable(s) independiente(s) que mejor se asocian con la presencia ?
+  b. Construye la matriz de confusión para los 3 grupos (el total, las ocurrencias del norte y las del sur)
+  
+
+### Predicción
+6.  Indica cual es la predicción para la distribución de  *C. patagus* 
+
+7.  Discute tus resultados desde las siguientes perspectivas:
+  a.  Técnicas la construcción del modelo elegido
+  b.  Biológica y de conservación de tu *especie de preferencia*.

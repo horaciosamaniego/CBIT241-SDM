@@ -1,0 +1,9 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+data/
+# shapefile de comunas
+comunas.*
+# datos de worldclim
+wc*
