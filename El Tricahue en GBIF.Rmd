@@ -1,11 +1,8 @@
 ---
 title: "Nicho y SDM"
-author: "Horacio Samaniego"
+author: "Horacio Samaniego (horacio.samaniego@gmail.com)"
 date: "`r Sys.Date()`"
-
-editor_options: 
-  markdown: 
-    wrap: 120
+output: html_document
 ---
 
 # Modelos de distribucion de especies I
@@ -64,8 +61,8 @@ para poder acceder a datos de GBIF como parte de la practica de hacer [ciencia a
 
 ### Estudio de distribución de especies usando datos de GBIF
 
-Vamos a hacer un modelo de distribucion de especies para *Octodon degus*.
-[Aquí](https://es.wikipedia.org/wiki/Octodon_degus) una descripción del endémico ratón de cola de pincel.
+Vamos a hacer un modelo de distribucion de especies para *Cyanoliseus patagonus*.
+[Aquí](https://www.avesdechile.cl/059.htm) una descripción del loro tricahue.
 
 **¿Cuántos registros de presencia hay para Chile?**
 
@@ -80,22 +77,22 @@ georreferenciados o bien el número de registros por país. Chile en este caso.
 
 ```{r ej-gbif-chile, echo=TRUE, warning=FALSE}
 
-## Conteo para Chile
+## Número de registros totales con georeferencia para Chile
 occ_count(country="CL",hasCoordinate = TRUE, hasGeospatialIssue=FALSE)
 ```
 
-Un ejemplo: ¿Cuántos registros georeferenciado de puma (*Puma concolor*) existen en GBIF para Chile?
+Un ejemplo: ¿Cuántos registros georeferenciado de tricahue (*Cyanoliseus patagonus*) existen en GBIF?
 
-```{r pumas-arg, echo=TRUE}
-name <- name_backbone(name='Puma concolor', rank='species') # Obtención del código del taxón
+```{r tricahue-en-gbif, echo=TRUE}
+name <- name_backbone(name='Cyanoliseus patagonus', rank='species') # Obtención del código del taxón
 
 print(name[, c('usageKey', 'scientificName')])
 ```
 
-Usando el número de registro para *Puma concolor* en la Base de datos GBIF podemos contarlos:
+Usando el número de registro para *Cyanoliseus patagonus* en la Base de datos GBIF podemos contarlos:
 
 ```{r pumas-n-arg, echo=TRUE, warning=FALSE}
-p_en_cl <- occ_count(taxonKey = 2435099, 
+p_en_cl <- occ_count(taxonKey = 2479529, 
           country = 'CL',
           hasCoordinate = TRUE, 
           hasGeospatialIssue=FALSE
@@ -129,7 +126,7 @@ recomienda en caso de buscar un volumen mayor de información desde GBIF.
 -   Ojo -\> Sólo se entregan **máximo de 100000** registros en cada llamada.
 -   Mas info [aqui](https://docs.ropensci.org/rgbif/articles/getting_occurrence_data.html) para descargas de datos.
 
-```{r degus-chile, echo=TRUE}
+```{r tricahue-chile, echo=TRUE}
 spp ="Cyanoliseus patagonus"
 cp <- occ_data(
   scientificName = spp, 
@@ -146,7 +143,7 @@ cp$data |>
   scroll_box(width = "100%", height = "300px")
 ```
 
-Vemos (con: `dim(od$data)`) que la consulta nos retornó `r nrow(od$data)` registros (filas) y `r ncol(od$data)` columnas
+Vemos (con: `dim(cp$data)`) que la consulta nos retornó `r nrow(cp$data)` registros (filas) y `r ncol(cp$data)` columnas
 de información para cada registro. Esos son muchos datos para cada registro. Debemos evaluar qué son y ver cuales nos
 son útiles!!!
 
@@ -180,7 +177,7 @@ latlon ([epsg: 4326](https://epsg.io/4326)).
 -   [Aquí](https://www.nceas.ucsb.edu/sites/default/files/2020-04/OverviewCoordinateReferenceSystems.pdf) una guía
     básica para comprender proyecciones geográficas de [NCEAS](https://www.nceas.ucsb.edu/).
 
-```{r degus-sf, echo=TRUE}
+```{r tricahue-sf, echo=TRUE}
 # od_sf <- st_as_sf(od$data, coords = c("decimalLongitude", "decimalLatitude"), 
                    # crs= "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
 cp_sf <- st_as_sf(cp$data, coords = c("decimalLongitude", "decimalLatitude"), 
@@ -189,7 +186,7 @@ cp_sf <- st_as_sf(cp$data, coords = c("decimalLongitude", "decimalLatitude"),
 
 ahora, veamos nuevamente la tabla completa:
 
-```{r ver-table-degus-gbif, echo=TRUE}
+```{r ver-tabla-tricahue-gbif, echo=TRUE}
 cp_sf |>
   kbl() |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed")) |>
@@ -395,13 +392,13 @@ yo veo las variables :
 ```{r sel-vars-bioclimaticas, echo=TRUE}
 Bioclim2 <- Bioclim[[c("bio_1","bio_3","bio_5","bio_9","bio_10")]]
 
-Clima2 <- raster::extract(Bioclim2, od_sf) |>
+Clima2 <- raster::extract(Bioclim2, cp_sf) |>
     as.data.frame()
 
 #rm(Bioclim)
 ```
 
-Unimos los datos de ocurrencia de *C. patagu* con los datos biolimáticos para tener todo en una sola tabla que
+Unimos los datos de ocurrencia de *C. patagus* con los datos biolimáticos para tener todo en una sola tabla que
 tendrá las coordenadas geográficas de las ocurrencias en GBIF para Chile.
 
 ```{r juntar-datos, echo=TRUE}

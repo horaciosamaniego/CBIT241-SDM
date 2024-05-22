@@ -2,9 +2,14 @@
 .Rhistory
 .RData
 .Ruserdata
+*Rproj*
 data/
 # shapefile de comunas
 comunas.*
 # datos de worldclim
 wc*
 03*Rmd
+
+
+ .git/   ./                         El-Tricahue-en-GBIF_files/   .RData      El-Tricahue-en-GBIF_cache/   wc2.1_country/   comunas.shp.xml   comunas.shp   comunas.dbf   comunas.sbn   03-Distribucion_de_Especies_y_GBIF.Rmd
+ ../    'El Tricahue en GBIF.Rmd'   CBIT241-SDM.Rproj            .Rhistory   .gitignore                   wc2-5/           comunas.shx       comunas.CPG   comunas.prj   comunas.sbx   .Rproj.user/
