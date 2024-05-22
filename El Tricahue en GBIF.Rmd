@@ -401,8 +401,8 @@ Clima2 <- raster::extract(Bioclim2, od_sf) |>
 #rm(Bioclim)
 ```
 
-Unimos los datos de ocurrencia de *Octodon degus* con los datos biolimáticos para tener todo en una sola tabla que
-tendrá las coordenadas geográficas de las ocurrencias de *O.degus* en GBIF para Chile.
+Unimos los datos de ocurrencia de *C. patagu* con los datos biolimáticos para tener todo en una sola tabla que
+tendrá las coordenadas geográficas de las ocurrencias en GBIF para Chile.
 
 ```{r juntar-datos, echo=TRUE}
 cp2 <- cp_sf |>
