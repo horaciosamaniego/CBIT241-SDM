@@ -5,11 +5,11 @@ date: "`r Sys.Date()`"
 output: 
   html_document: 
     toc: true
-    highlight: tango
-    theme: simplex
+    highlight: espresso
+    theme: readable
     fig_caption: true
     number_sections: true
-    df_print: kable
+    df_print: tibble
 ---
 
 # Modelos de distribucion de especies I
@@ -144,7 +144,7 @@ de datos de GBIF!
 Ahora, podemos describir la distribucion de **Cyanoliseus patagonus**.
 
 ![*Cyanoliseus patagonus* (Molina,
-1782)](https://upload.wikimedia.org/wikipedia/commons/5/5c/Cyanoliseus_patagonus_-Limari_Province%2C_Chile_-three-8_%28cropped%29.jpg)
+1782)](./Cyanoliseus_patagonus_-Limari_Province%2C_Chile_-three-8_%28cropped%29.jpg)
 
 -   [Aqui](https://especies.mma.gob.cl/CNMWeb/Web/WebCiudadana/ficha_indepen.aspx?EspecieId=4&Version=1)
     encuentras la ficha del Ministerio del Medio Ambiente aqui para esta
@@ -279,7 +279,7 @@ comunas = read_sf("comunas.shp") |>
   st_transform(crs=32719) # es importante manejar esa info en coordenadas "reales"
 cp_sf2 <- cp_sf |>
   st_transform(crs=32719) # es importante manejar esa info en coordenadas "reales"
-rm(cp_sf) # borramos mapa en latlon para ahorrar memoria
+# rm(cp_sf) # borramos mapa en latlon para ahorrar memoria
 
 ggplot() + 
   geom_sf(data=comunas, alpha=.1) +
@@ -319,11 +319,14 @@ localidad y año, luego crea (con `mutate()`) una columna donde almacena el núm
 registros distintos.
 
 ```{r ploteo-interactivo, echo=TRUE}
-conteo <- cp_sf |>
-  group_by(locality,year) |>
+conteo <- cp_sf2 |>
+  group_by(stateProvince,year) |>
   mutate('Número de registros'=n()) |>
-  distinct()|>
+#  distinct()|>
   st_as_sf()
+
+conteo |>
+  select('Número de registros',stateProvince,year)
 ```
 
 Con esto vemos solo las columnas indicadas por `select()` Vamos a
