@@ -10,6 +10,9 @@ output:
     fig_caption: true
     number_sections: true
     df_print: tibble
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 # Modelos de distribucion de especies I
@@ -144,7 +147,7 @@ de datos de GBIF!
 Ahora, podemos describir la distribucion de **Cyanoliseus patagonus**.
 
 ![*Cyanoliseus patagonus* (Molina,
-1782)](./Cyanoliseus_patagonus_-Limari_Province%2C_Chile_-three-8_%28cropped%29.jpg)
+1782)](Cyanoliseus_patagonus_-Limari_Province,_Chile_-three-8_(cropped).jpg)
 
 -   [Aqui](https://especies.mma.gob.cl/CNMWeb/Web/WebCiudadana/ficha_indepen.aspx?EspecieId=4&Version=1)
     encuentras la ficha del Ministerio del Medio Ambiente aqui para esta
@@ -228,22 +231,20 @@ simplemente la latlon ([epsg: 4326](https://epsg.io/4326)).
     [NCEAS](https://www.nceas.ucsb.edu/).
 
 ```{r tricahue-sf, echo=TRUE}
-# od_sf <- st_as_sf(od$data, coords = c("decimalLongitude", "decimalLatitude"), 
-                   # crs= "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
 cp_sf <- st_as_sf(cp$data, coords = c("decimalLongitude", "decimalLatitude"), 
                    crs= "epsg:4326")
-
 ```
 
 ahora, veamos nuevamente la tabla completa:
 
 ```{r ver-tabla-tricahue-gbif, echo=TRUE}
-# cp_sf |>
-#   kbl() |>
-#   kable_styling(bootstrap_options = c("striped", "hover", "condensed")) |>
-#   scroll_box(width = "100%", height = "400px")
+# mostramos las primeras 20 lineas
+cp_sf[1:20,] |>
+  kbl() |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) |>
+  scroll_box(width = "100%", height = "400px")
 
-cp_sf[1:5,]
+# cp_sf[1:20,] # hace lo ismo que arriba, pero sin la libreria kblExtra
 
 ```
 
@@ -274,7 +275,6 @@ if ( !file.exists(shp) ){
 }
 
 comunas = read_sf("comunas.shp") |>
-#  dplyr::filter(Region == 'Región de Los Ríos') |>
   dplyr::select(Comuna, Provincia) |>
   st_transform(crs=32719) # es importante manejar esa info en coordenadas "reales"
 cp_sf2 <- cp_sf |>
@@ -291,22 +291,29 @@ ggplot() +
 ```
 
 podemos hacer un zoom limitando el `x` e `y` a mostrar con `ylim` y
-`xlim`. Pero para eso usamos `st_bbox()` que retorna la extensión del
-objeto geográfico:
+`xlim`. Para eso usamos `st_bbox()` que retorna la extensión del objeto
+geográfico. Noten las diferencias entre los objetos.
 
 ```{r mapa-ggplot, echo=TRUE}
 # con esto vemos los limites geograficos al obj
+print('cp_sf:')
 print(st_bbox(cp_sf))
+
+print('cp_sf2:')
+print(st_bbox(cp_sf2))
+
+# borrar el primero para liberar memoria
+rm(cp_sf)
 ```
 
-Como vemos, hay 2 núcleos principales y algunos puntos que representan,
-probablemente errores de avistamiento (?). Debieramos removerlos antes
-del análisis.
+Como veremos en el próximo, hay 2 núcleos principales (¿poblaciones?) y
+algunos puntos que representan, probablemente, errores de avistamiento.
+OjO: Debieramos removerlos antes del análisis.
 
 ### Visualización interactiva
 
 Podemos usar mapview para explorar los datos de forma interactiva,
-usando la columna `year`, por ejemplo, para ver como se ha muestreado a
+usando la columna `year`, por ejemplo, para ver cómo se ha muestreado a
 través de los años. Vamos a usar el parámetro `cex` para ajustar el
 tamaño del marcador (punto) que nos permite visualizar el número de
 registros por año.
@@ -315,51 +322,42 @@ Creamos primero una tabla (`conteo`) que resume el número de
 avistamientos por localidad y se lo agregamos a una columna llamada
 'Número de registros'. Fíjate en el uso de `group_by()`, `mutate()` y
 `distinct()`. Son funciones de `dplyr` que en su conjunto agrupan por
-localidad y año, luego crea (con `mutate()`) una columna donde almacena el número de
-registros distintos.
+punto de muestreo, luego crea (con `mutate()`) una columna donde almacena
+el número de registros distintos.
 
 ```{r ploteo-interactivo, echo=TRUE}
 conteo <- cp_sf2 |>
-  group_by(stateProvince,year) |>
+  group_by(geometry) |>
+  dplyr::select(key,stateProvince,locality,day, month,year,recordedBy) |>
   mutate('Número de registros'=n()) |>
-#  distinct()|>
+  distinct()|>
   st_as_sf()
 
-conteo |>
-  select('Número de registros',stateProvince,year)
 ```
+
+Ahora, la nueva table `conteo` tiene el mismo numero de filas que `cp_sf2`, lo que nos indica que hay realmente un registro por fila.
 
 Con esto vemos solo las columnas indicadas por `select()` Vamos a
 
 ```{r conteo-tricaue, echo=TRUE}
-conteo |>
-  dplyr::select('Número de registros', scientificName, locality, year, stateProvince) |>
+filas = 15 # vamos a muestrear n numero de filas para mostrar.  
+conteo[sample(1:nrow(conteo),size=filas),] |>
   kbl() |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed")) |>
   scroll_box(width = "100%", height = "400px")
 ```
 
-Finalmente podemos guardar las tabla a un archivo CSV para poder subirlo
-a excel o qgis después, en caso de necesidad.
-
-```{r}
-# st_write(conteo, paste0(getwd(),"/","conteo.csv"), driver = "CSV", layer_options = "GEOMETRY=AS_XY", delete_dsn=TRUE)
-```
-
-#### Ploteo interactivo con MapView
+### Ploteo interactivo con MapView
 
 podemos ver los datos en un contexto geográfico web, y nos permite
 ajustar el tamaño de los puntos según valor de la columna de los números
 de registros, separados por la categoría de año (columna `year`).
 
 ```{r ploteo-interactivo2, echo=TRUE}
-
 mapview(conteo,zcol='year',cex="Número de registros", alpha=.35, layer.name='Año')
-
 ```
 
 ## Nicho climático
-
 Vamos a buscar cuáles son las condiciones climáticas en que están estos
 registros para generar asi, una definición (gruesa) del nicho climático
 para Tricahue.
@@ -382,16 +380,15 @@ bioclimáticas, en este ejemplo.
 # Bioclim <- worldclim_country("Chile", var="bio", res=0.5, path=getwd()) |>
 #   terra::crop(cp_sf)
 
-
 Bioclim <- worldclim_country("Chile", var=c("bio"), res=0.5, path=getwd()) |>
-  terra::crop(cp_sf)
+  terra::crop(st_transform(cp_sf2,'EPSG:4326')) # reproyectamos 'al vuelo', pues bioclim viene en epsg:4326
 
 names(Bioclim) <- sapply(strsplit(names(Bioclim), split='30s_', fixed=TRUE), function(x) (x[2])) # renombra columnas
 
 plot(Bioclim)
 ```
 
-### Clima en sitios de registro de *C. patagonus*
+### Clima en registro de *C. patagonus*
 
 Para extraer los datos bioclimáticos en las coordenadas geográficas,
 debemos consultar los pixeles de los rasters bioclimáticos donde existen
@@ -402,16 +399,18 @@ coordenadas](https://www.esri.com/arcgis-blog/wp-content/uploads/2018/08/extract
 
 La función a usar está en la librería `raster` y se llama `extract()`.
 
-Con eso generamos una tabla con las variables climaticas en cada una de
-las coordenadas en que hay registros de *C. patagonus* en GBIF.
+Con eso generamos una tabla con las variables climáticas en cada una de
+las coordenadas en que tenemos registros.
 
 ```{r extraccion-datos-bioclimaticos, echo=TRUE}
-Clima <- raster::extract(Bioclim, cp_sf) |>
-    as.data.frame()
+Clima <- raster::extract(Bioclim, st_transform(cp_sf2,'EPSG:4326'))
+```
 
-# Clima[1:5,]
-
-kable(Clima) |>
+Vemos la tabla con los datos bioclimáticos para cada registro. *(filas = primero 15 registros)*
+```{r }
+Clima |>
+  slice(1:filas) |>
+  kable() |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed")) |>
   scroll_box(width = "100%", height = "400px")
 ```
@@ -429,7 +428,7 @@ radiación, por ejemplo.
 Pero miremos primero cómo se relacionan los valores bioclimáticos
 recuperados para *C. patagonus*.
 
-### Selección de vaiables (bioclimaticas)
+### Selección de vaiables (bioclimáticas)
 
 Sabemos que las variables bioclimáticas son variables derivadas de la
 variables de clima. Por lo tanto, han de tener fuertes correlaciones
@@ -479,25 +478,25 @@ considerar directamente las variables climáticas.)
 
 ```{r sel-vars-bioclimaticas, echo=TRUE}
 ## ejemplo con algunas variables... que no son las correctas, pero muestra el procedimiento
-Bioclim2 <- Bioclim[[c("bio_1","bio_3","bio_5","bio_9","bio_10")]]
-
-Clima2 <- raster::extract(Bioclim2, cp_sf) |>
-    as.data.frame()
+Var_ambientales <- Clima|>
+  dplyr::select(bio_1,bio_3,bio_5,bio_9,bio_10)
 
 rm(Bioclim,Clima) # borramos para aliviar la memoria del compu!
 ```
 
 Unimos los datos de ocurrencia de *C. patagonus* con los datos
-biolimáticos para tener todo en una sola tabla que tendrá las
+bioclimáticos para tener todo en una sola tabla que tendrá las
 coordenadas geográficas de las ocurrencias en GBIF para Chile.
 
 ```{r juntar-datos, echo=TRUE}
-cp2 <- cp_sf |>
-  bind_cols(Clima2)
+cp_sf2 <- cp_sf2 |>
+  bind_cols(Var_ambientales)
 
 # print(cp2[1:3,])
 
-kable(cp2) |>
+cp_sf2 |>
+  slice(1:filas) |>
+  kable() |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))|>
   scroll_box(width = "100%", height = "400px")
 
