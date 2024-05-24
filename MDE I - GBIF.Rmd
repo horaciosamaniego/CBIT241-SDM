@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = FALSE)
 list.of.packages <- c("landscapemetrics","sf","mapview","terra","dplyr","RColorBrewer")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages,dep=TRUE,repos = "http://cran.us.r-project.org")
+library(rgbif)
 ```
 
 ## Modelos de Distribución de Especies
@@ -46,4 +47,10 @@ La construcción de MDE usan el concepto de nicho para:
   - Random Forest
   - Maxent (?)<br/>
   
-  
+## rgbif{.smaller}
+```{r rgbif, echo=TRUE}
+occ_count(taxonKey = 2479529, country = 'CL',
+          hasCoordinate = TRUE, hasGeospatialIssue=FALSE)
+```
+llamada a `rgbif` y obtener número de registros para taxon `2479529` -:> *Cyanoliseus patagonus*
+
