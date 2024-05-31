@@ -115,7 +115,9 @@ o bien el número de registros por país. Chile en este caso.
 ```{r ej-gbif-chile, echo=TRUE, warning=FALSE}
 
 ## Número de registros totales con georeferencia para Chile
-occ_count(country="CL",hasCoordinate = TRUE, hasGeospatialIssue=FALSE)
+occ_count(
+  # country="CL",
+          hasCoordinate = TRUE, hasGeospatialIssue=FALSE)
 ```
 
 Un ejemplo: ¿Cuántos registros georeferenciado de tricahue (*Cyanoliseus
@@ -173,7 +175,7 @@ información desde GBIF.
 spp ="Cyanoliseus patagonus"
 cp <- occ_data(
   scientificName = spp, 
-  country = 'CL', 
+  country = 'CL',
   limit = 1e6, # define tope de un millón de registros
   hasCoordinate = TRUE, 
   hasGeospatialIssue = FALSE
