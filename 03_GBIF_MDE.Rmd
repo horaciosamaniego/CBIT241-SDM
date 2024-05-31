@@ -1,0 +1,255 @@
+---
+title: "Nicho y MDE 3"
+author: "Horacio Samaniego (horacio.samaniego@gmail.com)"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    toc: false
+    highlight: espresso
+    theme: readable
+    fig_caption: true
+    number_sections: false
+    df_print: tibble
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+#	message = FALSE,
+#	warning = FALSE,
+	cache = FALSE,
+	tidy = TRUE,
+	tidy.opts = list(blank = FALSE, width.cutoff = 80)
+)
+
+require(pacman)
+pacman::p_load(rgbif,
+               rworldxtra,
+               sf , 
+               terra, 
+               ggplot2,
+               tidyverse, 
+               kableExtra, 
+               mapview, 
+               geodata,
+               ggcorrplot,
+               predictions,
+               dismo,
+               curl)
+
+# # For dev version
+# # install.packages("devtools")
+# devtools::install_github("haozhu233/kableExtra")
+
+options("kableExtra.html.bsTable" = T)
+```
+
+
+Del ejercicio pasado, tenemos que importar los objetos nuevamente
+
+```{r}
+# datos 
+datos = st_read("tricahue.gpkg")
+# raster con (todo) Bioclim para el área
+Bioclim = rast("Bioclim.tif")
+
+
+Var_ambientales = read.csv("Var_ambientales.csv",row.names = 1)
+
+```
+
+
+
+
+# Modelos de distribución de especies
+
+## Pseudo-ausencias (i.e. no-avistamientos)
+
+Necesitamos generar datos de pseudo-ausencias para evaluar sitios donde no se ha encontrado tricahue. Para eso generaremos  puntos aleatorios en la misma cantidad de ocurrencias descargadas de GBIF.
+
+Luego, combinamos con los datos de variables climáticas obtenidas para generar un objeto con todas las variables climáticaspara los sitios de presencias y de preudo-ausencias.
+```{r}
+p_load(dismo)
+
+# setting random seed to always create the same
+# random set of points for this example
+set.seed(69) 
+
+backgr <- dismo::randomPoints(raster::stack(Bioclim), nrow(Var_ambientales))
+pseudo_ausencias <- extract(Bioclim[[names(Var_ambientales)]], backgr) # restringimos extraccion a capas bioclimaticas de interes
+
+presencias <- c(rep(1, nrow(pseudo_ausencias)), rep(0, nrow(Var_ambientales)))
+mde_data <- data.frame(cbind(presencias, rbind(pseudo_ausencias, Var_ambientales)))
+
+```
+
+Ahora que tenemos datos climáticos para nuestros puntos de presencia y pseudoausencia en el objeto `mde_data`, vamos a construir nuestro modelo utilizando sólo una parte de nuestros datos, y utilizaremos los datos de *testeo* para evaluar después el rendimiento del modelo con el set de *validación*. 
+
+Separamos entonces nuestros datos en un conjunto de entrenamiento, o *testeo* (i.e. datos utilizados para construir el modelo) y un conjunto de prueba, o *validación* (i.e. los datos utilizados para evaluar el modelo). 
+
+Vamos a reservar el 20% de los datos para las pruebas, por lo que utilizaremos la función `folds()` del paquete `predicts` para asignar uniformemente cada punto a un grupo aleatorio. Para asegurarnos de que tenemos una muestra más o menos representativa tanto de puntos de presencia como de pseudoausencia, utilizamos la columna `presencias` para indicar a `R` que nuestros datos tienen estos dos subgrupos.
+
+
+
+
+```{r}
+p_load(predicts)
+fold <- folds(x = mde_data,
+              k = 5,
+              by = mde_data$presencias)
+
+# tabla de frecuencia en cada grupo
+table(fold)
+```
+
+Dejaremos los puntos en el grupo 1 para *validación* y los otros grupos (i.e. 2, 3, 4 y 5) para *entrenar* el modelo 
+
+```{r}
+testing <- mde_data[fold == 1, ]
+training <- mde_data[fold != 1, ]
+```
+
+
+
+## GLM
+### Ajustar modelo
+
+
+```{r glm, echo=TRUE}
+
+modelo_glm <- step(glm(presencias ~ ., data=training, family = binomial()),trace=0)
+summary(modelo_glm)
+```
+
+### Validación
+
+Con la función `pa_evaluate()`, pasamos datos que "sabemos" cuál debería ser la respuesta correcta para estos cálculos de probabilidad. Es decir, el modelo `m1` debería predecir valores cercanos a 1 para aquellas filas que pasemos al argumento `p` (porque sabemos que los tricahues se dan en esos lugares) y debería predecir valores cercanos a 0 para aquellas filas que pasemos al argumento `a`. Utilizamos esta información sobre el rendimiento del modelo para determinar el valor de probabilidad que se utilizará como límite para decir si una ubicación concreta es adecuada o inadecuada para los tricahues.
+
+```{r}
+# Use testing data for model evaluation
+glm_eval <- pa_evaluate(p = testing[testing$presencias == 1, ],
+                        a = testing[testing$presencias == 0, ],
+                        model = modelo_glm,
+                        type = "response")
+```
+
+
+
+
+
+
+### Predicción
+
+Con el modelo podemos generar 
+
+```{r glm-prediccion, echo=TRUE}
+predictions <- predict(Bioclim[[names(Var_ambientales)]], modelo_glm, type = "response")
+
+plot(predictions, colNA='black')
+
+
+```
+
+### Evaluación
+
+Podemos mirar el Area Bajo la Curva
+
+```{r}
+presence_data = filter(mde_data, presencias == 1)
+absence_data = filter(mde_data, presencias == 0)
+
+evaluation <- evaluate(presence_data, absence_data, modelo_glm)
+tr <- dismo::threshold(evaluation, 'spec_sens')
+
+plot(evaluation, 'ROC')  
+
+
+
+```
+### Umbrales de distribución
+
+```{r eval=FALSE, include=FALSE}
+# thresh <- dismo::threshold(evaluation, stat = 'prevalence')
+# thresh <- dismo::threshold(evaluation, 'spec_sens')
+# plot(predictions > thresh)#, ext = extent(-140, -50, 25, 60))
+# points(present, pch='+', cex = 0.5)
+
+```
+
+## Random Forest
+
+## Evaluación de modelo
+
+[Fieldings et al
+1997](https://www.dropbox.com/scl/fi/s9a0e56osliczbl3csuhg/Fielding_Bell_1997_A-review-of-methods-for-the-assessment-of-prediction-errors-in-conservation.pdf?rlkey=n1iib2m1dcgpc7ad81ykdy3np&dl=0)
+\### La matriz de confusión
+
+### data splitting
+
+## Reporte
+
+Con estos ejercicios iremos haciendo un reporte, que será entregado el
+18 de nunio 2024.
+
+### Descripción de datos y análisis preliminar
+
+### Mapeo y representación gráfica
+
+1.  Haz un mapa de la distribución de tu *C. patagus* para Chile
+
+<!-- -->
+
+a.  ¿En cuántas Regiones encontramos a esta especie?
+b.  Remueve los "outliers". ¿En cuales comunas de Chile está ahora?
+
+### Análisis de variables independientes
+
+3.  Construye una base de datos (tabla), con los valores de
+    *temperatura*, *pp*, *radiación* y variables bioclimáticas donde
+    ocurre tu *C.patagus* en Chile.
+    a.  Elige las variables mas idoneas para modelar el nicho de *C.
+        patagus*. Justifica tu elección en términos de la biología de la
+        especie.
+4.  Describe estadisticamente el espacio bioclimático en que ocurre tu
+    *especie de preferencia*
+
+<!-- -->
+
+a.  Rangos de T y PP, promedio, moda, desviaciones...
+
+<!-- -->
+
+5.  Separa los puntos de ocurrencia en 2 sets que representen las
+    poblaciones disjuntas de la especie.
+
+<!-- -->
+
+a.  Vuelve a a hacer 3 y 4
+
+### Análisis de distribución
+
+5.  General 2 modelos de distribución para cada grupo de ocurrencias.
+    Esto es, usa dos modelos estadísticos de tu preferencia que
+    expliquen la distribución de *C. patagus* en su conjunto y los 2
+    grupos de ocurrencia seleccionado en 5
+
+<!-- -->
+
+a.  ¿Cuál(es) es(son) la(s) variable(s) independiente(s) que mejor se
+    asocian con la presencia ?
+b.  Construye la matriz de confusión para los 3 grupos (el total, las
+    ocurrencias del norte y las del sur)
+
+### Predicción
+
+6.  Indica cual es la predicción para la distribución de *C. patagus*
+
+7.  Discute tus resultados desde las siguientes perspectivas:
+
+<!-- -->
+
+a.  Técnicas la construcción del modelo elegido
+b.  Biológica y de conservación de tu *especie de preferencia*.
