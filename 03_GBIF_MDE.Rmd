@@ -45,30 +45,32 @@ pacman::p_load(rgbif,
 options("kableExtra.html.bsTable" = T)
 ```
 
-
 Del ejercicio pasado, tenemos que importar los objetos nuevamente
 
 ```{r}
 # datos 
 datos = st_read("tricahue.gpkg")
 # raster con (todo) Bioclim para el área
-Bioclim = rast("Bioclim.tif")
+Bioclim = rast("Bioclim_raster.tif")
 
+plot(Bioclim[["bio6"]])
 
 Var_ambientales = read.csv("Var_ambientales.csv",row.names = 1)
 
 ```
 
-
-
-
 # Modelos de distribución de especies
 
 ## Pseudo-ausencias (i.e. no-avistamientos)
 
-Necesitamos generar datos de pseudo-ausencias para evaluar sitios donde no se ha encontrado tricahue. Para eso generaremos  puntos aleatorios en la misma cantidad de ocurrencias descargadas de GBIF.
+Necesitamos generar datos de pseudo-ausencias para evaluar sitios donde
+no se ha encontrado tricahue. Para eso generaremos puntos aleatorios en
+la misma cantidad de ocurrencias descargadas de GBIF.
 
-Luego, combinamos con los datos de variables climáticas obtenidas para generar un objeto con todas las variables climáticaspara los sitios de presencias y de preudo-ausencias.
+Luego, combinamos con los datos de variables climáticas obtenidas para
+generar un objeto con todas las variables climáticaspara los sitios de
+presencias y de preudo-ausencias.
+
 ```{r}
 p_load(dismo)
 
@@ -76,22 +78,31 @@ p_load(dismo)
 # random set of points for this example
 set.seed(69) 
 
-backgr <- dismo::randomPoints(raster::stack(Bioclim), nrow(Var_ambientales))
+backgr <- dismo::randomPoints(raster::stack(Bioclim), nrow(Var_ambientales)/2)
 pseudo_ausencias <- extract(Bioclim[[names(Var_ambientales)]], backgr) # restringimos extraccion a capas bioclimaticas de interes
 
 presencias <- c(rep(1, nrow(pseudo_ausencias)), rep(0, nrow(Var_ambientales)))
-mde_data <- data.frame(cbind(presencias, rbind(pseudo_ausencias, Var_ambientales)))
+mde_data <- data.frame(cbind(presencias, rbind(Var_ambientales,pseudo_ausencias)))
 
 ```
 
-Ahora que tenemos datos climáticos para nuestros puntos de presencia y pseudoausencia en el objeto `mde_data`, vamos a construir nuestro modelo utilizando sólo una parte de nuestros datos, y utilizaremos los datos de *testeo* para evaluar después el rendimiento del modelo con el set de *validación*. 
+Ahora que tenemos datos climáticos para nuestros puntos de presencia y
+pseudoausencia en el objeto `mde_data`, vamos a construir nuestro modelo
+utilizando sólo una parte de nuestros datos, y utilizaremos los datos de
+*testeo* para evaluar después el rendimiento del modelo con el set de
+*validación*.
 
-Separamos entonces nuestros datos en un conjunto de entrenamiento, o *testeo* (i.e. datos utilizados para construir el modelo) y un conjunto de prueba, o *validación* (i.e. los datos utilizados para evaluar el modelo). 
+Separamos entonces nuestros datos en un conjunto de entrenamiento, o
+*testeo* (i.e. datos utilizados para construir el modelo) y un conjunto
+de prueba, o *validación* (i.e. los datos utilizados para evaluar el
+modelo).
 
-Vamos a reservar el 20% de los datos para las pruebas, por lo que utilizaremos la función `folds()` del paquete `predicts` para asignar uniformemente cada punto a un grupo aleatorio. Para asegurarnos de que tenemos una muestra más o menos representativa tanto de puntos de presencia como de pseudoausencia, utilizamos la columna `presencias` para indicar a `R` que nuestros datos tienen estos dos subgrupos.
-
-
-
+Vamos a reservar el 20% de los datos para las pruebas, por lo que
+utilizaremos la función `folds()` del paquete `predicts` para asignar
+uniformemente cada punto a un grupo aleatorio. Para asegurarnos de que
+tenemos una muestra más o menos representativa tanto de puntos de
+presencia como de pseudoausencia, utilizamos la columna `presencias`
+para indicar a `R` que nuestros datos tienen estos dos subgrupos.
 
 ```{r}
 p_load(predicts)
@@ -103,18 +114,17 @@ fold <- folds(x = mde_data,
 table(fold)
 ```
 
-Dejaremos los puntos en el grupo 1 para *validación* y los otros grupos (i.e. 2, 3, 4 y 5) para *entrenar* el modelo 
+Dejaremos los puntos en el grupo 1 para *validación* y los otros grupos
+(i.e. 2, 3, 4 y 5) para *entrenar* el modelo
 
 ```{r}
 testing <- mde_data[fold == 1, ]
 training <- mde_data[fold != 1, ]
 ```
 
-
-
 ## GLM
-### Ajustar modelo
 
+### Ajustar modelo
 
 ```{r glm, echo=TRUE}
 
@@ -122,26 +132,9 @@ modelo_glm <- step(glm(presencias ~ ., data=training, family = binomial()),trace
 summary(modelo_glm)
 ```
 
-### Validación
-
-Con la función `pa_evaluate()`, pasamos datos que "sabemos" cuál debería ser la respuesta correcta para estos cálculos de probabilidad. Es decir, el modelo `m1` debería predecir valores cercanos a 1 para aquellas filas que pasemos al argumento `p` (porque sabemos que los tricahues se dan en esos lugares) y debería predecir valores cercanos a 0 para aquellas filas que pasemos al argumento `a`. Utilizamos esta información sobre el rendimiento del modelo para determinar el valor de probabilidad que se utilizará como límite para decir si una ubicación concreta es adecuada o inadecuada para los tricahues.
-
-```{r}
-# Use testing data for model evaluation
-glm_eval <- pa_evaluate(p = testing[testing$presencias == 1, ],
-                        a = testing[testing$presencias == 0, ],
-                        model = modelo_glm,
-                        type = "response")
-```
-
-
-
-
-
-
 ### Predicción
 
-Con el modelo podemos generar 
+Con el modelo podemos generar
 
 ```{r glm-prediccion, echo=TRUE}
 predictions <- predict(Bioclim[[names(Var_ambientales)]], modelo_glm, type = "response")
@@ -151,41 +144,171 @@ plot(predictions, colNA='black')
 
 ```
 
-### Evaluación
+### Evaluación del modelo
 
-Podemos mirar el Area Bajo la Curva
+Artículos relevantes: - [Fieldings et al
+(1997)](https://www.dropbox.com/scl/fi/s9a0e56osliczbl3csuhg/Fielding_Bell_1997_A-review-of-methods-for-the-assessment-of-prediction-errors-in-conservation.pdf?rlkey=n1iib2m1dcgpc7ad81ykdy3np&dl=0) -
+[Liu et al. (2011)](https://doi.org/10.1111/j.1600-0587.2010.06354.x)
+
+### Validación
+
+El objeto `glm_eval`, nos muestra la calidad de la evaluación. Sin
+embargo, el modelo que generamos nos entrega valores continuos como
+predictores (i.e. la probabilidad de ocurrencia). Por eso necesitamos
+encontrar un umbral para decidir donde ocurre realmente la especie.
 
 ```{r}
-presence_data = filter(mde_data, presencias == 1)
-absence_data = filter(mde_data, presencias == 0)
+# Use testing data for model evaluation
+glm_eval <- pa_evaluate(p = testing[testing$presencias == 1, ],
+                        a = testing[testing$presencias == 0, ],
+                        model = modelo_glm,
+                        type = "response")
+```
 
-evaluation <- evaluate(presence_data, absence_data, modelo_glm)
-tr <- dismo::threshold(evaluation, 'spec_sens')
+Entonces, con la función `pa_evaluate()`, le pasamos datos que "sabemos"
+cuál debería ser la respuesta correcta para estos cálculos de
+probabilidad. Es decir, el modelo `modelo_glm` debería predecir valores
+cercanos a `1` para aquellas filas que pasemos al argumento `p` (porque
+sabemos que los tricahues se dan en esos lugares) y debería predecir
+valores cercanos a 0 para aquellas filas que pasemos al argumento `a`.
+Utilizamos esta información sobre el rendimiento del modelo para
+determinar el valor de probabilidad que se utilizará como límite para
+decir si una ubicación concreta es adecuada o inadecuada para los
+tricahues.
 
-plot(evaluation, 'ROC')  
+El elemento thresholds de `glm_eval` guarda la información que nos
+permite determinar el umbral de corte. Aquí elegimos `max_spec_sens`,
+que establece "*el umbral en el que la suma de la sensibilidad (tasa de
+verdaderos positivos) y la especificidad (tasa de verdaderos negativos)
+es más alta*". Para más información, consulte la documentación de la
+función `pa_evaluate()`.
+
+Una vez defiinido ese umbral, podemos mirar el AUC, o área bajo la
+curva. Como sabemos, un `AUC=0.5`, nos dice que el modelo se comporta
+igual que si hubieramos elegido variables por simple azar, cuando
+`AUC=1.0`, la predicción es perfecta (y poco creible, probablemente
+sobre-ajustada).
+
+```{r}
+tr <- predicts::threshold(glm_eval)
+
+plot(glm_eval, 'ROC')  
 
 
 
 ```
-### Umbrales de distribución
+
+veamos la evaluación en la proxima sección
+
+## Evaluación de modelo
+
+### Detección de umbrales
+
+Podemos usar distintos umbrales para definir presencias.
+
+Se define:
+
+-   kappa: *el umbral en el que kappa es mayor*
+-   no_omission: *el umbral más alto en el que no hay omisión*
+-   prevalence : *la prevalencia modelizada es la más cercana a la
+    prevalencia observada*
+-   equal_sens_spec : *equal sensitivity and specificity*
+-   max_spec_sens: *el umbral en el que la suma de la sensibilidad (tasa
+    de verdaderos positivos) y la especificidad (tasa de verdaderos
+    negativos) es mayor*
 
 ```{r eval=FALSE, include=FALSE}
-# thresh <- dismo::threshold(evaluation, stat = 'prevalence')
-# thresh <- dismo::threshold(evaluation, 'spec_sens')
-# plot(predictions > thresh)#, ext = extent(-140, -50, 25, 60))
-# points(present, pch='+', cex = 0.5)
 
+glm_threshold <- glm_eval@thresholds$max_spec_sens
+
+plot(predictions > glm_threshold)
+
+
+```
+
+
+## Árboles de Regresión (extra)
+
+Como vimos en clases, los árboles de clasificación y de regresión tienen
+una lógica similar a una clave taxonómica. Recorrer el arbol, en la
+practica, nos va guiando por una serie de pasos dicotómicos donde se
+homogeniza la presencia, o ausencia, de las ocurrencias. Esto quiere
+decir que vamos encontrando las mejores combinaciones de variables que
+determinan la ocurrencia de una especie.
+
+Usaremos la librería `rpart` para generar el modelo, veamos,
+
+```{r}
+p_load(rpart)
+
+# generamos nuestro modelo
+cart <- rpart(presencias~., data=mde_data)
+
+# vemos resultado 
+printcp(cart)
+```
+
+El problema de estos modelos es que son capaces de ajustar el modelo a
+los datos de forma casi perfecta, pues el número de "ramas" del puede
+ser tal que quede, finalmente, sólo un data en cada rama. Esta es una
+característica de los modelos de aprendizaje atomático. (nota: ChatGPT,
+es uno de ellos) Dada esta situación, es importante evaluar cuánto es el
+número de ramas "justo" para que el modelo sea lo suficientemente
+general y capaz de hacer una buena predicción.
+
+Podemos evaluar el error asociado al numero de "ramas", o niveles, que
+tiene el arbol.
+
+```{r}
+# visualizamos cuanto aporta cada rama
+
+plot(cart)
+
+```
+
+Por último, podemos ver el árbol con los umbrales que genera cada rama
+
+```{r}
+plot(cart, uniform=TRUE, main="Árbol de regresión")
+
+# text(cart, use.n=TRUE, all=TRUE, cex=.8)
+text(cart, cex=.8, digits=1)
 ```
 
 ## Random Forest
 
-## Evaluación de modelo
+Una manera de limitar el árbol, es usar una compbinación de regresión y
+clasificacion
 
-[Fieldings et al
-1997](https://www.dropbox.com/scl/fi/s9a0e56osliczbl3csuhg/Fielding_Bell_1997_A-review-of-methods-for-the-assessment-of-prediction-errors-in-conservation.pdf?rlkey=n1iib2m1dcgpc7ad81ykdy3np&dl=0)
-\### La matriz de confusión
+```{r}
+p_load(randomForest)
 
-### data splitting
+# crea un factor que indicará lo que queremos clasificar
+fpa <- as.factor(dw[, 'presencias'])
+
+crf <- randomForest(dw[, 2:ncol(dw)], fpa)
+
+plot(crf)
+
+```
+
+Podemos generar un gráfico con la importancia de las variables. Este nos
+muestra qué variables son las más importantes para ajustar el modelo.
+Internamente, lo que ocurre es un cálculo que aleatoriza cada variable
+una a una yx luego calcula como disminuye el poder de predicción del
+modelo.
+
+```{r}
+varImpPlot(crf)
+```
+
+Ahora, podemos ajustar el modelo con esta información. Esto nos deja
+listos para hacer la regresión.
+
+```{r}
+trf <- tuneRF(dw[, 2:ncol(dw)], dw[, 'presencias'])
+
+```
 
 ## Reporte
 

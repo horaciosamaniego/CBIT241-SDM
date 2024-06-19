@@ -84,8 +84,8 @@ necesario.
 ```{r worldclim, echo=TRUE}
 
 Bioclim <- worldclim_country(c("Chile","Argentina"), 
-                             var=c("bio"), res=0.5, path=getwd()) |>
-  terra::crop(st_transform(datos,'EPSG:4326')) # reproyectamos 'al vuelo', pues bioclim viene en epsg:4326
+                             var=c("bio"), res=0.5, path=getwd()) #|>
+  # terra::crop(st_transform(datos,'EPSG:4326')) # reproyectamos 'al vuelo', pues bioclim viene en epsg:4326
 
 names(Bioclim) <- sapply(strsplit(names(Bioclim), split='30s_', fixed=TRUE), function(x) (x[2])) # renombra columnas
 names(Bioclim) <- sapply(gsub('_','',names(Bioclim)), function(x) (x))
@@ -160,25 +160,26 @@ artificial.
     
 
 A continuación se describen las 19 variables bioclimáticas:
-- bio1 = Temperatura media anual
-- bio2 = amplitud diurna media (media de la temperatura máxima y mínima)
-- bio3 = Isotermia (bio2/bio7) (* 100)
-- bio4 = Estacionalidad de la temperatura (desviación típica *100)
-- bio5 = Temperatura máxima del mes más cálido
-- bio6 = Temperatura mínima del mes más frío
-- bio7 = Rango anual de temperaturas (bio5-bio6)
-- bio8 = Temperatura media del trimestre más húmedo
-- bio9 = Temperatura media del trimestre más seco
-- bio10 = Temperatura media del trimestre más cálido
-- bio11 = Temperatura media del trimestre más frío
-- bio12 = Precipitación total (anual)
-- bio13 = Precipitación del mes más húmedo
-- bio14 = Precipitación del mes más seco
-- bio15 = Estacionalidad de las precipitaciones (coeficiente de variación)
-- bio16 = Precipitación del trimestre más húmedo
-- bio17 = Precipitaciones del trimestre más seco
-- bio18 = Precipitaciones del trimestre más cálido
-- bio19 = Precipitaciones del trimestre más frío
+
+  - bio1 = Temperatura media anual
+  - bio2 = amplitud diurna media (media de la temperatura máxima y mínima)
+  - bio3 = Isotermia (bio2/bio7) (* 100)
+  - bio4 = Estacionalidad de la temperatura (desviación típica *100)
+  - bio5 = Temperatura máxima del mes más cálido
+  - bio6 = Temperatura mínima del mes más frío
+  - bio7 = Rango anual de temperaturas (bio5-bio6)
+  - bio8 = Temperatura media del trimestre más húmedo
+  - bio9 = Temperatura media del trimestre más seco
+  - bio10 = Temperatura media del trimestre más cálido
+  - bio11 = Temperatura media del trimestre más frío
+  - bio12 = Precipitación total (anual)
+  - bio13 = Precipitación del mes más húmedo
+  - bio14 = Precipitación del mes más seco
+  - bio15 = Estacionalidad de las precipitaciones (coeficiente de variación)
+  - bio16 = Precipitación del trimestre más húmedo
+  - bio17 = Precipitaciones del trimestre más seco
+  - bio18 = Precipitaciones del trimestre más cálido
+  - bio19 = Precipitaciones del trimestre más frío
 
 Buscamos comprender cuáles variables bioclimáticas son
 significativamente relevantes para describir, y predecir, la
@@ -197,8 +198,8 @@ hacerse con la librería `ggcorrplot` y su parámetro `hc.order`.
 # library(ggcorrplot)
 p_load(ggcorrplot)
 
-corr <- cor(Clima[,-1],use = "pairwise") # ojo que removemos la primera columna que es el 'ID'
-ggcorrplot::ggcorrplot(corr,method='circle',pch=2,show.diag = FALSE,type="upper",
+corr <- cor(Clima,use = "pairwise") # ojo que removemos la primera columna que es el 'ID'
+ggcorrplot::ggcorrplot(corr,method='square',pch=2,show.diag = FALSE, type = "upper",
            ggtheme = theme_minimal(),hc.order = TRUE)
 ```
 
@@ -207,11 +208,10 @@ correlación (no negativa!).
 
 yo veo las variables :
 
--   BIO?? = XXX
--   BIO?? = XXX
--   BIO?? = XXX
--   BIO?? = XXX
--   BIO?? = XXX
+-   BIO1
+-   BIO5
+-   BIO9
+-   BIO10
 
 (son todas de temperatura?.... mmmh sus. Creo que será importante
 considerar directamente las variables climáticas.)
@@ -219,7 +219,7 @@ considerar directamente las variables climáticas.)
 ```{r sel-vars-bioclimaticas, echo=TRUE}
 ## ejemplo con algunas variables... que no son las correctas, pero muestra el procedimiento
 Var_ambientales <- Clima|>
-  dplyr::select(bio1,bio3,bio5,bio9,bio10)
+  dplyr::select(bio1,bio5,bio9,bio10)
 
 rm(Clima) # borramos para aliviar la memoria del compu!
 ```
