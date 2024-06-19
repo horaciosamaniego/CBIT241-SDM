@@ -227,88 +227,18 @@ plot(predictions > glm_threshold)
 ```
 
 
-## Árboles de Regresión (extra)
+### Algebra de mapas en R
 
-Como vimos en clases, los árboles de clasificación y de regresión tienen
-una lógica similar a una clave taxonómica. Recorrer el arbol, en la
-practica, nos va guiando por una serie de pasos dicotómicos donde se
-homogeniza la presencia, o ausencia, de las ocurrencias. Esto quiere
-decir que vamos encontrando las mejores combinaciones de variables que
-determinan la ocurrencia de una especie.
+para comparar mapas raster usando la libreía `terra`.
 
-Usaremos la librería `rpart` para generar el modelo, veamos,
 
 ```{r}
-p_load(rpart)
+st = predictions - predictions
 
-# generamos nuestro modelo
-cart <- rpart(presencias~., data=mde_data)
-
-# vemos resultado 
-printcp(cart)
-```
-
-El problema de estos modelos es que son capaces de ajustar el modelo a
-los datos de forma casi perfecta, pues el número de "ramas" del puede
-ser tal que quede, finalmente, sólo un data en cada rama. Esta es una
-característica de los modelos de aprendizaje atomático. (nota: ChatGPT,
-es uno de ellos) Dada esta situación, es importante evaluar cuánto es el
-número de ramas "justo" para que el modelo sea lo suficientemente
-general y capaz de hacer una buena predicción.
-
-Podemos evaluar el error asociado al numero de "ramas", o niveles, que
-tiene el arbol.
-
-```{r}
-# visualizamos cuanto aporta cada rama
-
-plot(cart)
+plot(st)
 
 ```
 
-Por último, podemos ver el árbol con los umbrales que genera cada rama
-
-```{r}
-plot(cart, uniform=TRUE, main="Árbol de regresión")
-
-# text(cart, use.n=TRUE, all=TRUE, cex=.8)
-text(cart, cex=.8, digits=1)
-```
-
-## Random Forest
-
-Una manera de limitar el árbol, es usar una compbinación de regresión y
-clasificacion
-
-```{r}
-p_load(randomForest)
-
-# crea un factor que indicará lo que queremos clasificar
-fpa <- as.factor(dw[, 'presencias'])
-
-crf <- randomForest(dw[, 2:ncol(dw)], fpa)
-
-plot(crf)
-
-```
-
-Podemos generar un gráfico con la importancia de las variables. Este nos
-muestra qué variables son las más importantes para ajustar el modelo.
-Internamente, lo que ocurre es un cálculo que aleatoriza cada variable
-una a una yx luego calcula como disminuye el poder de predicción del
-modelo.
-
-```{r}
-varImpPlot(crf)
-```
-
-Ahora, podemos ajustar el modelo con esta información. Esto nos deja
-listos para hacer la regresión.
-
-```{r}
-trf <- tuneRF(dw[, 2:ncol(dw)], dw[, 'presencias'])
-
-```
 
 ## Reporte
 

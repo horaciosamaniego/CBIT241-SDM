@@ -213,7 +213,7 @@ yo veo las variables :
 -   BIO9
 -   BIO10
 
-(son todas de temperatura?.... mmmh sus. Creo que será importante
+(son todas de temperatura?.... mmmh sospechoso. Creo que será importante
 considerar directamente las variables climáticas.)
 
 ```{r sel-vars-bioclimaticas, echo=TRUE}
