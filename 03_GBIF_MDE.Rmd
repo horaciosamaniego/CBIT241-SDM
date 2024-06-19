@@ -283,15 +283,17 @@ a.  Vuelve a a hacer 3 y 4
 ### Análisis de distribución
 
 5.  General 2 modelos de distribución para cada grupo de ocurrencias.
-    Esto es, usa dos modelos estadísticos de tu preferencia que
-    expliquen la distribución de *C. patagus* en su conjunto y los 2
+    Esto es, usa el modelos estadísticos *glm* para 
+    explicar la distribución de *C. patagus* en su conjunto y los 2
     grupos de ocurrencia seleccionado en 5
 
 <!-- -->
 
 a.  ¿Cuál(es) es(son) la(s) variable(s) independiente(s) que mejor se
     asocian con la presencia ?
-b.  Construye la matriz de confusión para los 3 grupos (el total, las
+b.  Genera 2 predicciones de distribucion, una con calibración, la del norte y la del sur para predecir sobre toda el área
+c.  Describe las diferencias. ¿En qué medida son diferentes los nichos?
+d.  (bonus) Reconstruye la matriz de confusión para los 2 grupos (las
     ocurrencias del norte y las del sur)
 
 ### Predicción
