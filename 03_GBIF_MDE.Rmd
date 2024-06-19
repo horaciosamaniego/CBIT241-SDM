@@ -152,6 +152,8 @@ Artículos relevantes: - [Fieldings et al
 
 ### Validación
 
+El estadístico de evaluación más común es el AUC: el área bajo la curva receiver-operating characteristic (ROC). Las curvas ROC se generan calculando la *sensibilidad* (tasa de verdaderos positivos) y la *especificidad* (tasa de verdaderos negativos) para muchos umbrales a lo largo de toda la gama de probabilidades previstas. Como veremos en el gráfico mas abajo, (1-especificidad) se traza en el eje de abscisas frente a la sensibilidad en el eje de ordenadas. El área bajo esta curva se denomina AUC. Cuanto más se desvíe la curva generada de la línea 1:1 hacia la esquina superior izquierda, mejor predice el modelo la presencia/ausencia de una especie. Si tomamos una presencia aleatoria y una ausencia aleatoria de nuestras observaciones y hacemos predicciones, el AUC puede interpretarse como la probabilidad de asignar una probabilidad de ocurrencia predicha más alta al punto de presencia que al de ausencia. Normalmente, consideramos que un AUC > 0,7 indica que las predicciones son correctas ([Araujo et al. 2005](https://onlinelibrary.wiley.com/doi/full/10.1111/j.1365-2486.2005.01000.x)).
+
 El objeto `glm_eval`, nos muestra la calidad de la evaluación. Sin
 embargo, el modelo que generamos nos entrega valores continuos como
 predictores (i.e. la probabilidad de ocurrencia). Por eso necesitamos
@@ -243,7 +245,7 @@ plot(st)
 ## Reporte
 
 Con estos ejercicios iremos haciendo un reporte, que será entregado el
-18 de nunio 2024.
+24 de junio 2024.
 
 ### Descripción de datos y análisis preliminar
 
@@ -282,7 +284,7 @@ a.  Vuelve a a hacer 3 y 4
 
 ### Análisis de distribución
 
-5.  General 2 modelos de distribución para cada grupo de ocurrencias.
+6.  General 2 modelos de distribución para cada grupo de ocurrencias.
     Esto es, usa el modelos estadísticos *glm* para 
     explicar la distribución de *C. patagus* en su conjunto y los 2
     grupos de ocurrencia seleccionado en 5
@@ -293,14 +295,15 @@ a.  ¿Cuál(es) es(son) la(s) variable(s) independiente(s) que mejor se
     asocian con la presencia ?
 b.  Genera 2 predicciones de distribucion, una con calibración, la del norte y la del sur para predecir sobre toda el área
 c.  Describe las diferencias. ¿En qué medida son diferentes los nichos?
+d.  ¿En qué se diferencian las evaluaciones generadas por el ROC y las métricas umbral dependientes, como Kapa o prevalencias?
 d.  (bonus) Reconstruye la matriz de confusión para los 2 grupos (las
     ocurrencias del norte y las del sur)
 
 ### Predicción
 
-6.  Indica cual es la predicción para la distribución de *C. patagus*
+7.  Indica cual es la predicción para la distribución de *C. patagus*
 
-7.  Discute tus resultados desde las siguientes perspectivas:
+8.  Discute tus resultados desde las siguientes perspectivas:
 
 <!-- -->
 

@@ -463,6 +463,22 @@ al. (2011)</a></p>
 </div>
 <div id="validación" class="section level3">
 <h3>Validación</h3>
+<p>El estadístico de evaluación más común es el AUC: el área bajo la
+curva receiver-operating characteristic (ROC). Las curvas ROC se generan
+calculando la <em>sensibilidad</em> (tasa de verdaderos positivos) y la
+<em>especificidad</em> (tasa de verdaderos negativos) para muchos
+umbrales a lo largo de toda la gama de probabilidades previstas. Como
+veremos en el gráfico mas abajo, (1-especificidad) se traza en el eje de
+abscisas frente a la sensibilidad en el eje de ordenadas. El área bajo
+esta curva se denomina AUC. Cuanto más se desvíe la curva generada de la
+línea 1:1 hacia la esquina superior izquierda, mejor predice el modelo
+la presencia/ausencia de una especie. Si tomamos una presencia aleatoria
+y una ausencia aleatoria de nuestras observaciones y hacemos
+predicciones, el AUC puede interpretarse como la probabilidad de asignar
+una probabilidad de ocurrencia predicha más alta al punto de presencia
+que al de ausencia. Normalmente, consideramos que un AUC &gt; 0,7 indica
+que las predicciones son correctas (<a href="https://onlinelibrary.wiley.com/doi/full/10.1111/j.1365-2486.2005.01000.x">Araujo
+et al. 2005</a>).</p>
 <p>El objeto <code>glm_eval</code>, nos muestra la calidad de la
 evaluación. Sin embargo, el modelo que generamos nos entrega valores
 continuos como predictores (i.e. la probabilidad de ocurrencia). Por eso
@@ -528,7 +544,7 @@ plot(st)</code></pre>
 <div id="reporte" class="section level2">
 <h2>Reporte</h2>
 <p>Con estos ejercicios iremos haciendo un reporte, que será entregado
-el 18 de nunio 2024.</p>
+el 24 de junio 2024.</p>
 <div id="descripción-de-datos-y-análisis-preliminar" class="section level3">
 <h3>Descripción de datos y análisis preliminar</h3>
 </div>
@@ -574,9 +590,9 @@ poblaciones disjuntas de la especie.</li>
 </div>
 <div id="análisis-de-distribución" class="section level3">
 <h3>Análisis de distribución</h3>
-<ol start="5" style="list-style-type: decimal">
+<ol start="6" style="list-style-type: decimal">
 <li>General 2 modelos de distribución para cada grupo de ocurrencias.
-Esto es, usa dos modelos estadísticos de tu preferencia que expliquen la
+Esto es, usa el modelos estadísticos <em>glm</em> para explicar la
 distribución de <em>C. patagus</em> en su conjunto y los 2 grupos de
 ocurrencia seleccionado en 5</li>
 </ol>
@@ -584,13 +600,19 @@ ocurrencia seleccionado en 5</li>
 <ol style="list-style-type: lower-alpha">
 <li>¿Cuál(es) es(son) la(s) variable(s) independiente(s) que mejor se
 asocian con la presencia ?</li>
-<li>Construye la matriz de confusión para los 3 grupos (el total, las
+<li>Genera 2 predicciones de distribucion, una con calibración, la del
+norte y la del sur para predecir sobre toda el área</li>
+<li>Describe las diferencias. ¿En qué medida son diferentes los
+nichos?</li>
+<li>¿En qué se diferencian las evaluaciones generadas por el ROC y las
+métricas umbral dependientes, como Kapa o prevalencias?</li>
+<li>(bonus) Reconstruye la matriz de confusión para los 2 grupos (las
 ocurrencias del norte y las del sur)</li>
 </ol>
 </div>
 <div id="predicción-1" class="section level3">
 <h3>Predicción</h3>
-<ol start="6" style="list-style-type: decimal">
+<ol start="7" style="list-style-type: decimal">
 <li><p>Indica cual es la predicción para la distribución de <em>C.
 patagus</em></p></li>
 <li><p>Discute tus resultados desde las siguientes
