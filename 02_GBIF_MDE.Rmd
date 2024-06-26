@@ -118,8 +118,15 @@ Con eso generamos una tabla con las variables climáticas en cada una de
 las coordenadas en que tenemos registros.
 
 ```{r extraccion-datos-bioclimaticos, echo=TRUE}
+S = read_sf("cp_Sur.gpkg")
+N = read_sf("cp_Norte.gpkg")
+
 Clima <- terra::extract(Bioclim, st_transform(datos,'EPSG:4326'))
+ClimaS <- terra::extract(Bioclim, st_transform(S,'EPSG:4326'))
+ClimaN <- terra::extract(Bioclim, st_transform(N,'EPSG:4326'))
 Clima <- Clima[,-1]
+ClimaN <- ClimaN[,-1]
+ClimaS <- ClimaS[,-1]
 ```
 
 Vemos la tabla con los datos bioclimáticos para cada registro. *(filas =
@@ -244,6 +251,9 @@ write_sf(datos, "tricahue.gpkg")
 
 # Var ambientales
 write.csv(Var_ambientales,"Var_ambientales.csv")
+write.csv(Clima,"Clima.csv")
+write.csv(ClimaN,"ClimaN.csv")
+write.csv(ClimaS,"ClimaS.csv")
 ```
 
 

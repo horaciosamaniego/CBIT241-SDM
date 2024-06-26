@@ -257,69 +257,65 @@ plot(st)
 ## Reporte
 
 Con estos ejercicios iremos haciendo un reporte, que será entregado el
-24 de junio 2024.
+26 de junio 2024. [*75 pts totales*]
 
 ### Descripción de datos y análisis preliminar
 
 ### Mapeo y representación gráfica
 
-1.  Haz un mapa de la distribución de tu *C. patagus* para Chile
+1.  Haz un mapa de la distribución de tu *C. patagus* para Chile [5pts]
 
 <!-- -->
 
-a.  ¿En cuántas Regiones encontramos a esta especie?
-b.  Remueve los "outliers". ¿En cuales comunas de Chile está ahora?
+a.  ¿En cuántas Regiones encontramos a esta especie? [2pts]
+b.  Remueve los "outliers". ¿En cuales comunas de Chile está ahora? [3pts]
 
 ### Análisis de variables independientes
 
 3.  Construye una base de datos (tabla), con los valores de
-    *temperatura*, *pp*, *radiación* y variables bioclimáticas donde
-    ocurre tu *C.patagus* en Chile.
-    a.  Elige las variables mas idoneas para modelar el nicho de *C.
+    variables bioclimáticas donde
+    ocurre tu *C.patagus* en Chile. (opcional: puedes incluir *temperatura*, *pp* y *radiación*, para una descripción mas precisa del nicho)
+    a.  Elige y justifica las variables mas idoneas para modelar el nicho de *C.
         patagus*. Justifica tu elección en términos de la biología de la
-        especie.
+        especie. [5pt]
 4.  Describe estadisticamente el espacio bioclimático en que ocurre tu
-    *especie de preferencia*
-
-<!-- -->
-
-a.  Rangos de T y PP, promedio, moda, desviaciones...
+    *especie de preferencia* [10pts]
 
 <!-- -->
 
 5.  Separa los puntos de ocurrencia en 2 sets que representen las
-    poblaciones disjuntas de la especie.
+    poblaciones disjuntas de la especie. [2pts]
 
 <!-- -->
 
-a.  Vuelve a a hacer 3 y 4
+a.  Vuelve a a hacer 3 y 4 [3pts]
 
 ### Análisis de distribución
 
-6.  General 2 modelos de distribución para cada grupo de ocurrencias.
-    Esto es, usa el modelos estadísticos *glm* para explicar la
+6.  General un modelo de distribución para cada grupo de ocurrencias.
+    Usa el modelos estadísticos *glm* para explicar la
     distribución de *C. patagus* en su conjunto y los 2 grupos de
-    ocurrencia seleccionado en 5
+    ocurrencia seleccionado en 5 
 
 <!-- -->
 
 a.  ¿Cuál(es) es(son) la(s) variable(s) independiente(s) que mejor se
-    asocian con la presencia ?
-b.  Genera 2 predicciones de distribucion, una con calibración, la del
-    norte y la del sur para predecir sobre toda el área
-c.  Describe las diferencias. ¿En qué medida son diferentes los nichos?
+    asocian con la presencia ? [5pts]
+b.  Genera una predicción de distribución, una con calibración, la del
+    norte y la del sur para predecir sobre toda el área [3pts]
+c.  Describe las diferencias. ¿En qué medida son diferentes los nichos? [5pts]
 d.  ¿En qué se diferencian las evaluaciones generadas por el ROC y las
-    métricas umbral dependientes, como Kapa o prevalencias?
+    métricas umbral dependientes, como Kapa o prevalencias? [10pts]
 e.  (bonus) Reconstruye la matriz de confusión para los 2 grupos (las
-    ocurrencias del norte y las del sur)
+    ocurrencias del norte y las del sur) [10pts]
 
 ### Predicción
 
-7.  Indica cual es la predicción para la distribución de *C. patagus*
+7.  Indica cual es la predicción para la distribución de *C. patagus* [2pts]
 
 8.  Discute tus resultados desde las siguientes perspectivas:
 
 <!-- -->
 
-a.  Técnicas la construcción del modelo elegido
-b.  Biológica y de conservación de tu *especie de preferencia*.
+a.  Técnicas la construcción del modelo elegido [10pts]
+b.  Biológica y de conservación del loro Tricahue. [10pts]
